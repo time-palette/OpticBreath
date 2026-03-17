@@ -32,7 +32,6 @@
             touch-action: none;
         }
 
-        /* 背景の装飾的なボケ */
         .bg-glow {
             position: absolute;
             width: 100vw;
@@ -40,6 +39,7 @@
             background: radial-gradient(circle at center, rgba(0, 209, 255, 0.05) 0%, transparent 70%);
             pointer-events: none;
             z-index: 0;
+            transition: background 1.5s ease;
         }
 
         #app-container {
@@ -53,34 +53,37 @@
             padding: 20px;
         }
 
-        /* ガイドメッセージ */
         #message-area {
-            height: 60px;
+            height: 100px;
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         #main-msg {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             font-weight: 300;
             letter-spacing: 0.1em;
             margin: 0;
-            transition: opacity 0.8s, transform 0.8s;
+            transition: opacity 0.8s, transform 0.8s, color 0.5s;
             color: var(--accent-color);
         }
 
         #sub-msg {
-            font-size: 0.9rem;
-            color: #666;
-            margin-top: 10px;
+            font-size: 0.95rem;
+            color: #aaa;
+            margin-top: 12px;
             opacity: 0.8;
+            line-height: 1.5;
+            transition: opacity 0.5s;
         }
 
-        /* 呼吸サークル */
         .visual-area {
             position: relative;
-            width: 300px;
-            height: 300px;
+            width: 280px;
+            height: 280px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -91,72 +94,95 @@
             height: 20px;
             background-color: var(--primary-color);
             border-radius: 50%;
-            box-shadow: 0 0 40px var(--primary-color), 0 0 80px rgba(0, 209, 255, 0.3);
-            transition: transform 4s ease-in-out, opacity 4s ease-in-out;
+            box-shadow: 0 0 40px var(--primary-color), 0 0 80px var(--primary-color);
+            transition: transform 4s ease-in-out, opacity 4s ease-in-out, background-color 1s ease, box-shadow 1s ease;
             transform: scale(1);
             will-change: transform;
         }
 
-        /* 操作パネル */
+        /* ペースセレクターの改善 */
+        .pace-selector {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px;
+            border-radius: 25px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: opacity 0.3s;
+        }
+
+        .pace-btn {
+            background: none;
+            border: none;
+            color: #666;
+            padding: 8px 24px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            z-index: 1;
+        }
+
+        .pace-btn.active {
+            color: #000;
+            background-color: var(--primary-color);
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
         .controls {
-            margin-top: 60px;
+            margin-top: 40px;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 20px;
         }
 
-        button {
+        #start-btn {
             background: none;
             border: 1px solid var(--primary-color);
             color: var(--primary-color);
-            padding: 12px 40px;
+            padding: 12px 50px;
             font-size: 1rem;
             border-radius: 30px;
             cursor: pointer;
             transition: all 0.3s;
-            outline: none;
         }
 
-        button:active {
-            background-color: rgba(0, 209, 255, 0.1);
-            transform: scale(0.95);
-        }
-
-        button.stop {
-            border-color: #444;
+        #stop-btn {
+            background: none;
+            border: 1px solid #444;
             color: #888;
-        }
-
-        /* 説明文 */
-        .info {
-            position: absolute;
-            bottom: 30px;
-            font-size: 0.75rem;
-            color: #444;
-            text-align: center;
-            padding: 0 20px;
-            line-height: 1.6;
-        }
-
-        /* 状態管理用 */
-        .is-running .breathing-circle {
-            /* JSで動的に制御するため、ここではクラスのみ定義 */
+            padding: 10px 30px;
+            font-size: 0.9rem;
+            border-radius: 30px;
+            cursor: pointer;
         }
 
         .hidden {
             display: none !important;
         }
+
+        .invisible {
+            opacity: 0;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
-    <div class="bg-glow"></div>
+    <div class="bg-glow" id="bg-glow"></div>
 
     <div id="app-container">
         <div id="message-area">
             <h1 id="main-msg">呼吸を整えましょう</h1>
             <div id="sub-msg">準備ができたらスタート</div>
+        </div>
+
+        <div class="pace-selector" id="pace-selector">
+            <button class="pace-btn" data-pace="normal">普通</button>
+            <button class="pace-btn active" data-pace="slow">ゆっくり</button>
         </div>
 
         <div class="visual-area">
@@ -165,13 +191,8 @@
 
         <div class="controls">
             <button id="start-btn">トレーニング開始</button>
-            <button id="stop-btn" class="stop hidden">終了</button>
+            <button id="stop-btn" class="hidden">終了</button>
         </div>
-    </div>
-
-    <div class="info" id="info-panel">
-        円が大きくなる時に「鼻から吸う」、小さくなる時に「口から吐く」。<br>
-        視線は常に光の「輪郭」を追い、ピントを合わせ続けてください。
     </div>
 
     <script>
@@ -180,65 +201,129 @@
         const subMsg = document.getElementById('sub-msg');
         const startBtn = document.getElementById('start-btn');
         const stopBtn = document.getElementById('stop-btn');
-        const infoPanel = document.getElementById('info-panel');
+        const bgGlow = document.getElementById('bg-glow');
+        const paceSelector = document.getElementById('pace-selector');
+        const paceBtns = document.querySelectorAll('.pace-btn');
 
         let isRunning = false;
         let timer = null;
+        let currentColor = '#00d1ff';
+        
+        // 2つのモードに整理
+        const paceSettings = {
+            normal: { inhale: 4000, exhale: 4000 }, // 計8秒
+            slow: { inhale: 5500, exhale: 7500 }    // 計13秒 (よりゆったり)
+        };
+        let currentPace = 'slow';
+
+        const feedbackMessages = [
+            "脳が再起動されました",
+            "視界がクリアになりましたね",
+            "脳のキャッシュがクリアされました",
+            "さあ、新しい視点で再開しましょう",
+            "深い呼吸が、次のパフォーマンスを作ります",
+            "感覚が研ぎ澄まされました",
+            "心に余白が生まれました"
+        ];
+
+        const healingColors = [
+            '#00d1ff', '#00ffcc', '#a29bfe', '#fab1a0', '#ffeaa7', '#55efc4', '#81ecec'
+        ];
+
+        const getRandomElement = (array) => array[Math.floor(Math.random() * array.length)];
+
+        const applyThemeColor = (color) => {
+            currentColor = color;
+            document.documentElement.style.setProperty('--primary-color', color);
+            circle.style.backgroundColor = color;
+            circle.style.boxShadow = `0 0 40px ${color}, 0 0 80px ${color}`;
+            startBtn.style.color = color;
+            startBtn.style.borderColor = color;
+            bgGlow.style.background = `radial-gradient(circle at center, ${color}1a 0%, transparent 70%)`;
+            
+            // アクティブなボタンの色も更新
+            const activeBtn = document.querySelector('.pace-btn.active');
+            if (activeBtn) {
+                activeBtn.style.backgroundColor = color;
+            }
+        };
+
+        // ペース選択
+        paceBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                paceBtns.forEach(b => {
+                    b.classList.remove('active');
+                    b.style.backgroundColor = 'transparent';
+                });
+                btn.classList.add('active');
+                btn.style.backgroundColor = currentColor;
+                currentPace = btn.dataset.pace;
+            });
+        });
 
         const startTraining = () => {
             isRunning = true;
+            applyThemeColor(getRandomElement(healingColors));
             startBtn.classList.add('hidden');
             stopBtn.classList.remove('hidden');
-            infoPanel.style.opacity = '0.3';
+            paceSelector.classList.add('invisible');
             
             runCycle();
-            timer = setInterval(runCycle, 8000);
         };
 
         const stopTraining = () => {
             isRunning = false;
-            clearInterval(timer);
+            if (timer) clearTimeout(timer);
             startBtn.classList.remove('hidden');
             stopBtn.classList.add('hidden');
-            infoPanel.style.opacity = '1';
+            paceSelector.classList.remove('invisible');
             
-            // リセット
+            circle.style.transition = 'transform 1s ease, opacity 1s ease';
             circle.style.transform = 'scale(1)';
+            circle.style.opacity = '1';
             mainMsg.innerText = 'お疲れ様でした';
-            subMsg.innerText = '視界の明るさを味わってください';
             mainMsg.style.color = '#fff';
+            subMsg.innerText = getRandomElement(feedbackMessages);
         };
 
         const runCycle = () => {
             if (!isRunning) return;
 
-            // Inhale phase (0-4s)
-            mainMsg.innerText = '鼻から深く吸って';
-            mainMsg.style.color = '#00d1ff';
+            const settings = paceSettings[currentPace];
+            
+            mainMsg.innerText = '深く吸って';
+            mainMsg.style.color = currentColor;
             subMsg.innerText = '光を広げるイメージで';
+            circle.style.transition = `transform ${settings.inhale}ms ease-in-out, opacity ${settings.inhale}ms ease-in-out`;
             circle.style.transform = 'scale(15)';
             circle.style.opacity = '1';
 
-            // Exhale phase (4-8s)
-            setTimeout(() => {
+            timer = setTimeout(() => {
                 if (!isRunning) return;
-                mainMsg.innerText = '口から細く吐いて';
+                
+                mainMsg.innerText = '細く吐いて';
                 mainMsg.style.color = '#ffffff';
                 subMsg.innerText = '意識を体へ戻します';
+                circle.style.transition = `transform ${settings.exhale}ms ease-in-out, opacity ${settings.exhale}ms ease-in-out`;
                 circle.style.transform = 'scale(1)';
                 circle.style.opacity = '0.4';
-            }, 4000);
+
+                timer = setTimeout(() => {
+                    if (isRunning) runCycle();
+                }, settings.exhale);
+            }, settings.inhale);
         };
+
+        // 初期設定
+        applyThemeColor(currentColor);
 
         startBtn.addEventListener('click', startTraining);
         stopBtn.addEventListener('click', stopTraining);
 
-        // iPhoneのSafariでスクロールを防止
         document.addEventListener('touchmove', (e) => {
             if (isRunning) e.preventDefault();
         }, { passive: false });
     </script>
 </body>
 </html>
-
 
