@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Optic Breath</title>
+    <style>
+        :root {
+            --bg-color: #050a0f;
+            --primary-color: #00d1ff;
+            --text-color: #e0e0e0;
+            --accent-color: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* 背景の装飾的なボケ */
+        .bg-glow {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at center, rgba(0, 209, 255, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #app-container {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+        }
+
+        /* ガイドメッセージ */
+        #message-area {
+            height: 60px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        #main-msg {
+            font-size: 1.5rem;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            margin: 0;
+            transition: opacity 0.8s, transform 0.8s;
+            color: var(--accent-color);
+        }
+
+        #sub-msg {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 10px;
+            opacity: 0.8;
+        }
+
+        /* 呼吸サークル */
+        .visual-area {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .breathing-circle {
+            width: 20px;
+            height: 20px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            box-shadow: 0 0 40px var(--primary-color), 0 0 80px rgba(0, 209, 255, 0.3);
+            transition: transform 4s ease-in-out, opacity 4s ease-in-out;
+            transform: scale(1);
+            will-change: transform;
+        }
+
+        /* 操作パネル */
+        .controls {
+            margin-top: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        button {
+            background: none;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 12px 40px;
+            font-size: 1rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        button:active {
+            background-color: rgba(0, 209, 255, 0.1);
+            transform: scale(0.95);
+        }
+
+        button.stop {
+            border-color: #444;
+            color: #888;
+        }
+
+        /* 説明文 */
+        .info {
+            position: absolute;
+            bottom: 30px;
+            font-size: 0.75rem;
+            color: #444;
+            text-align: center;
+            padding: 0 20px;
+            line-height: 1.6;
+        }
+
+        /* 状態管理用 */
+        .is-running .breathing-circle {
+            /* JSで動的に制御するため、ここではクラスのみ定義 */
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-glow"></div>
+
+    <div id="app-container">
+        <div id="message-area">
+            <h1 id="main-msg">呼吸を整えましょう</h1>
+            <div id="sub-msg">準備ができたらスタート</div>
+        </div>
+
+        <div class="visual-area">
+            <div id="circle" class="breathing-circle"></div>
+        </div>
+
+        <div class="controls">
+            <button id="start-btn">トレーニング開始</button>
+            <button id="stop-btn" class="stop hidden">終了</button>
+        </div>
+    </div>
+
+    <div class="info" id="info-panel">
+        円が大きくなる時に「鼻から吸う」、小さくなる時に「口から吐く」。<br>
+        視線は常に光の「輪郭」を追い、ピントを合わせ続けてください。
+    </div>
+
+    <script>
+        const circle = document.getElementById('circle');
+        const mainMsg = document.getElementById('main-msg');
+        const subMsg = document.getElementById('sub-msg');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const infoPanel = document.getElementById('info-panel');
+
+        let isRunning = false;
+        let timer = null;
+
+        const startTraining = () => {
+            isRunning = true;
+            startBtn.classList.add('hidden');
+            stopBtn.classList.remove('hidden');
+            infoPanel.style.opacity = '0.3';
+            
+            runCycle();
+            timer = setInterval(runCycle, 8000);
+        };
+
+        const stopTraining = () => {
+            isRunning = false;
+            clearInterval(timer);
+            startBtn.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
+            infoPanel.style.opacity = '1';
+            
+            // リセット
+            circle.style.transform = 'scale(1)';
+            mainMsg.innerText = 'お疲れ様でした';
+            subMsg.innerText = '視界の明るさを味わってください';
+            mainMsg.style.color = '#fff';
+        };
+
+        const runCycle = () => {
+            if (!isRunning) return;
+
+            // Inhale phase (0-4s)
+            mainMsg.innerText = '鼻から深く吸って';
+            mainMsg.style.color = '#00d1ff';
+            subMsg.innerText = '光を広げるイメージで';
+            circle.style.transform = 'scale(15)';
+            circle.style.opacity = '1';
+
+            // Exhale phase (4-8s)
+            setTimeout(() => {
+                if (!isRunning) return;
+                mainMsg.innerText = '口から細く吐いて';
+                mainMsg.style.color = '#ffffff';
+                subMsg.innerText = '意識を体へ戻します';
+                circle.style.transform = 'scale(1)';
+                circle.style.opacity = '0.4';
+            }, 4000);
+        };
+
+        startBtn.addEventListener('click', startTraining);
+        stopBtn.addEventListener('click', stopTraining);
+
+        // iPhoneのSafariでスクロールを防止
+        document.addEventListener('touchmove', (e) => {
+            if (isRunning) e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>
+
+
