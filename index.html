@@ -1,28 +1,29 @@
+```html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Optic Breath</title>
+    <title>Digital Zen | 1分間のリセット</title>
     <style>
         :root {
-            --bg-color: #050a0f;
-            --primary-color: #00d1ff;
-            --text-color: #e0e0e0;
-            --accent-color: #ffffff;
+            --bg-color: #010409;
+            --accent-color: #00f2ff;
+            --text-main: #f0f6fc;
+            --text-sub: #8b949e;
         }
 
         * {
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
             -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            margin: 0;
-            padding: 0;
             background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -32,298 +33,245 @@
             touch-action: none;
         }
 
-        .bg-glow {
+        /* 背景のオーラ演出 */
+        .ambient-glow {
             position: absolute;
             width: 100vw;
             height: 100vh;
-            background: radial-gradient(circle at center, rgba(0, 209, 255, 0.05) 0%, transparent 70%);
+            background: radial-gradient(circle at center, rgba(0, 242, 255, 0.04) 0%, transparent 70%);
             pointer-events: none;
-            z-index: 0;
-            transition: background 1.5s ease;
         }
 
-        #app-container {
+        .container {
             position: relative;
             z-index: 10;
             display: flex;
             flex-direction: column;
             align-items: center;
             width: 100%;
-            max-width: 500px;
+            max-width: 400px;
             padding: 20px;
         }
 
-        #message-area {
-            height: 100px;
-            text-align: center;
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+        #timer {
+            font-size: 3.5rem;
+            font-weight: 200;
+            letter-spacing: -0.05em;
+            margin-bottom: 5px;
+            font-variant-numeric: tabular-nums;
         }
 
-        #main-msg {
-            font-size: 1.4rem;
+        #instruction {
+            font-size: 1.2rem;
             font-weight: 300;
-            letter-spacing: 0.1em;
-            margin: 0;
-            transition: opacity 0.8s, transform 0.8s, color 0.5s;
-            color: var(--accent-color);
+            height: 1.5em;
+            margin-bottom: 50px;
+            transition: all 0.6s ease;
+            letter-spacing: 0.05em;
         }
 
-        #sub-msg {
-            font-size: 0.95rem;
-            color: #aaa;
-            margin-top: 12px;
-            opacity: 0.8;
-            line-height: 1.5;
-            transition: opacity 0.5s;
-        }
-
-        .visual-area {
+        /* 呼吸ビジュアライザー */
+        .visualizer {
             position: relative;
-            width: 280px;
-            height: 280px;
+            width: 250px;
+            height: 250px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .breathing-circle {
-            width: 20px;
-            height: 20px;
-            background-color: var(--primary-color);
+        #circle {
+            width: 16px;
+            height: 16px;
+            background-color: var(--accent-color);
             border-radius: 50%;
-            box-shadow: 0 0 40px var(--primary-color), 0 0 80px var(--primary-color);
-            transition: transform 4s ease-in-out, opacity 4s ease-in-out, background-color 1s ease, box-shadow 1s ease;
+            box-shadow: 
+                0 0 30px var(--accent-color),
+                0 0 60px rgba(0, 242, 255, 0.3);
             transform: scale(1);
-            will-change: transform;
+            opacity: 0.3;
+            will-change: transform, opacity;
         }
 
-        /* ペースセレクターの改善 */
-        .pace-selector {
-            display: flex;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 4px;
-            border-radius: 25px;
-            margin-bottom: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: opacity 0.3s;
-        }
-
-        .pace-btn {
-            background: none;
-            border: none;
-            color: #666;
-            padding: 8px 24px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-            z-index: 1;
-        }
-
-        .pace-btn.active {
-            color: #000;
-            background-color: var(--primary-color);
-            font-weight: bold;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-        }
-
+        /* 操作ボタン */
         .controls {
-            margin-top: 40px;
+            margin-top: 60px;
+            width: 100%;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
+            justify-content: center;
         }
 
-        #start-btn {
-            background: none;
-            border: 1px solid var(--primary-color);
-            color: var(--primary-color);
-            padding: 12px 50px;
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 242, 255, 0.4);
+            color: var(--accent-color);
+            padding: 14px 45px;
             font-size: 1rem;
-            border-radius: 30px;
+            border-radius: 50px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(8px);
+            letter-spacing: 0.05em;
         }
 
-        #stop-btn {
-            background: none;
-            border: 1px solid #444;
-            color: #888;
-            padding: 10px 30px;
-            font-size: 0.9rem;
-            border-radius: 30px;
-            cursor: pointer;
+        .btn:active {
+            transform: scale(0.96);
+            background: rgba(0, 242, 255, 0.1);
+        }
+
+        .btn.secondary {
+            border-color: #30363d;
+            color: #8b949e;
         }
 
         .hidden {
-            display: none !important;
+            display: none;
         }
 
-        .invisible {
-            opacity: 0;
-            pointer-events: none;
+        .helper-text {
+            position: absolute;
+            bottom: 40px;
+            font-size: 0.8rem;
+            color: #484f58;
+            text-align: center;
+            max-width: 80%;
+            line-height: 1.6;
+            transition: opacity 0.5s;
         }
     </style>
 </head>
 <body>
 
-    <div class="bg-glow" id="bg-glow"></div>
+    <div class="ambient-glow"></div>
 
-    <div id="app-container">
-        <div id="message-area">
-            <h1 id="main-msg">呼吸を整えましょう</h1>
-            <div id="sub-msg">準備ができたらスタート</div>
-        </div>
-
-        <div class="pace-selector" id="pace-selector">
-            <button class="pace-btn" data-pace="normal">普通</button>
-            <button class="pace-btn active" data-pace="slow">ゆっくり</button>
-        </div>
-
-        <div class="visual-area">
-            <div id="circle" class="breathing-circle"></div>
+    <div class="container">
+        <div id="timer">01:00</div>
+        <div id="instruction">1分間で、自分を取り戻す</div>
+        
+        <div class="visualizer">
+            <div id="circle"></div>
         </div>
 
         <div class="controls">
-            <button id="start-btn">トレーニング開始</button>
-            <button id="stop-btn" class="hidden">終了</button>
+            <button id="start-btn" class="btn">今すぐ始める</button>
+            <button id="stop-btn" class="btn secondary hidden">中断</button>
         </div>
     </div>
 
+    <div class="helper-text" id="helper">
+        光の拡大で鼻から吸い、縮小で口から吐く。<br>
+        視線は常に光の輪郭を追いかけてください。
+    </div>
+
     <script>
-        const circle = document.getElementById('circle');
-        const mainMsg = document.getElementById('main-msg');
-        const subMsg = document.getElementById('sub-msg');
+        const SESSION_SECONDS = 60; // 1 minute
+        const INHALE_MS = 4000;
+        const EXHALE_MS = 6000; // 10s per breath cycle = 6 breaths/min
+
+        let timeLeft = SESSION_SECONDS;
+        let isRunning = false;
+        let timerInterval = null;
+        let breathTimeout = null;
+
+        const timerEl = document.getElementById('timer');
+        const instructionEl = document.getElementById('instruction');
+        const circleEl = document.getElementById('circle');
         const startBtn = document.getElementById('start-btn');
         const stopBtn = document.getElementById('stop-btn');
-        const bgGlow = document.getElementById('bg-glow');
-        const paceSelector = document.getElementById('pace-selector');
-        const paceBtns = document.querySelectorAll('.pace-btn');
+        const helperEl = document.getElementById('helper');
 
-        let isRunning = false;
-        let timer = null;
-        let currentColor = '#00d1ff';
-        
-        // 2つのモードに整理
-        const paceSettings = {
-            normal: { inhale: 4000, exhale: 4000 }, // 計8秒
-            slow: { inhale: 5500, exhale: 7500 }    // 計13秒 (よりゆったり)
-        };
-        let currentPace = 'slow';
+        function formatTime(s) {
+            const min = Math.floor(s / 60);
+            const sec = s % 60;
+            return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+        }
 
-        const feedbackMessages = [
-            "脳が再起動されました",
-            "視界がクリアになりましたね",
-            "脳のキャッシュがクリアされました",
-            "さあ、新しい視点で再開しましょう",
-            "深い呼吸が、次のパフォーマンスを作ります",
-            "感覚が研ぎ澄まされました",
-            "心に余白が生まれました"
-        ];
-
-        const healingColors = [
-            '#00d1ff', '#00ffcc', '#a29bfe', '#fab1a0', '#ffeaa7', '#55efc4', '#81ecec'
-        ];
-
-        const getRandomElement = (array) => array[Math.floor(Math.random() * array.length)];
-
-        const applyThemeColor = (color) => {
-            currentColor = color;
-            document.documentElement.style.setProperty('--primary-color', color);
-            circle.style.backgroundColor = color;
-            circle.style.boxShadow = `0 0 40px ${color}, 0 0 80px ${color}`;
-            startBtn.style.color = color;
-            startBtn.style.borderColor = color;
-            bgGlow.style.background = `radial-gradient(circle at center, ${color}1a 0%, transparent 70%)`;
-            
-            // アクティブなボタンの色も更新
-            const activeBtn = document.querySelector('.pace-btn.active');
-            if (activeBtn) {
-                activeBtn.style.backgroundColor = color;
-            }
-        };
-
-        // ペース選択
-        paceBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                paceBtns.forEach(b => {
-                    b.classList.remove('active');
-                    b.style.backgroundColor = 'transparent';
-                });
-                btn.classList.add('active');
-                btn.style.backgroundColor = currentColor;
-                currentPace = btn.dataset.pace;
-            });
-        });
-
-        const startTraining = () => {
-            isRunning = true;
-            applyThemeColor(getRandomElement(healingColors));
-            startBtn.classList.add('hidden');
-            stopBtn.classList.remove('hidden');
-            paceSelector.classList.add('invisible');
-            
-            runCycle();
-        };
-
-        const stopTraining = () => {
-            isRunning = false;
-            if (timer) clearTimeout(timer);
-            startBtn.classList.remove('hidden');
-            stopBtn.classList.add('hidden');
-            paceSelector.classList.remove('invisible');
-            
-            circle.style.transition = 'transform 1s ease, opacity 1s ease';
-            circle.style.transform = 'scale(1)';
-            circle.style.opacity = '1';
-            mainMsg.innerText = 'お疲れ様でした';
-            mainMsg.style.color = '#fff';
-            subMsg.innerText = getRandomElement(feedbackMessages);
-        };
-
-        const runCycle = () => {
+        function updateBreathing() {
             if (!isRunning) return;
 
-            const settings = paceSettings[currentPace];
-            
-            mainMsg.innerText = '深く吸って';
-            mainMsg.style.color = currentColor;
-            subMsg.innerText = '光を広げるイメージで';
-            circle.style.transition = `transform ${settings.inhale}ms ease-in-out, opacity ${settings.inhale}ms ease-in-out`;
-            circle.style.transform = 'scale(15)';
-            circle.style.opacity = '1';
+            // 吸気 (4s)
+            instructionEl.innerText = "鼻からゆっくり吸って";
+            instructionEl.style.color = "var(--accent-color)";
+            circleEl.style.transition = `transform ${INHALE_MS}ms cubic-bezier(0.4, 0, 0.2, 1), opacity ${INHALE_MS}ms ease`;
+            circleEl.style.transform = "scale(15)";
+            circleEl.style.opacity = "1";
 
-            timer = setTimeout(() => {
+            breathTimeout = setTimeout(() => {
                 if (!isRunning) return;
-                
-                mainMsg.innerText = '細く吐いて';
-                mainMsg.style.color = '#ffffff';
-                subMsg.innerText = '意識を体へ戻します';
-                circle.style.transition = `transform ${settings.exhale}ms ease-in-out, opacity ${settings.exhale}ms ease-in-out`;
-                circle.style.transform = 'scale(1)';
-                circle.style.opacity = '0.4';
 
-                timer = setTimeout(() => {
-                    if (isRunning) runCycle();
-                }, settings.exhale);
-            }, settings.inhale);
-        };
+                // 呼気 (6s)
+                instructionEl.innerText = "口から細く長く吐いて";
+                instructionEl.style.color = "var(--text-main)";
+                circleEl.style.transition = `transform ${EXHALE_MS}ms cubic-bezier(0.4, 0, 0.2, 1), opacity ${EXHALE_MS}ms ease`;
+                circleEl.style.transform = "scale(1)";
+                circleEl.style.opacity = "0.2";
 
-        // 初期設定
-        applyThemeColor(currentColor);
+                breathTimeout = setTimeout(updateBreathing, EXHALE_MS);
+            }, INHALE_MS);
+        }
 
-        startBtn.addEventListener('click', startTraining);
-        stopBtn.addEventListener('click', stopTraining);
+        function startSession() {
+            isRunning = true;
+            timeLeft = SESSION_SECONDS;
+            timerEl.innerText = formatTime(timeLeft);
+            
+            startBtn.classList.add('hidden');
+            stopBtn.classList.remove('hidden');
+            helperEl.style.opacity = "0.1";
 
+            updateBreathing();
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = formatTime(timeLeft);
+
+                if (timeLeft <= 0) {
+                    endSession();
+                }
+            }, 1000);
+        }
+
+        function stopSession() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            clearTimeout(breathTimeout);
+            
+            startBtn.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
+            helperEl.style.opacity = "1";
+
+            instructionEl.innerText = "1分間で、自分を取り戻す";
+            timerEl.innerText = formatTime(SESSION_SECONDS);
+            circleEl.style.transition = "all 0.5s ease";
+            circleEl.style.transform = "scale(1)";
+            circleEl.style.opacity = "0.3";
+        }
+
+        function endSession() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            clearTimeout(breathTimeout);
+
+            startBtn.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
+            startBtn.innerText = "もう1回行う";
+            
+            instructionEl.innerText = "視界と心が整いました";
+            circleEl.style.transform = "scale(1)";
+            circleEl.style.opacity = "0.3";
+            helperEl.style.opacity = "1";
+        }
+
+        startBtn.addEventListener('click', startSession);
+        stopBtn.addEventListener('click', stopSession);
+
+        // iPhone Safari スクロール防止
         document.addEventListener('touchmove', (e) => {
             if (isRunning) e.preventDefault();
         }, { passive: false });
     </script>
 </body>
 </html>
+
+```
 
