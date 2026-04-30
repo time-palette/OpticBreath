@@ -9,6 +9,7 @@
             --bg: #000000;
             --glow: #00f2ff;
             --text: #ffffff;
+            --sub: rgba(255,255,255,0.55);
         }
 
         body {
@@ -26,19 +27,28 @@
         }
 
         #timer {
-            font-size: 3rem;
+            font-size: 2.6rem;
             font-weight: 200;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             font-variant-numeric: tabular-nums;
-            opacity: 0.8;
+            opacity: 0.55;
+            transition: opacity 1.2s ease, transform 1.2s ease;
+        }
+
+        body.active #timer {
+            opacity: 0.22;
+            transform: scale(0.94);
         }
 
         #state {
-            font-size: 1.2rem;
-            letter-spacing: 0.2em;
-            height: 1.5em;
-            margin-bottom: 60px;
+            font-size: 1.05rem;
+            letter-spacing: 0.18em;
+            height: 1.8em;
+            margin-bottom: 56px;
             font-weight: 300;
+            color: rgba(255,255,255,0.86);
+            transition: opacity 1s ease;
+            text-align: center;
         }
 
         .stage {
@@ -55,34 +65,37 @@
             height: 12px;
             background: var(--glow);
             border-radius: 50%;
-            box-shadow: 0 0 30px var(--glow), 0 0 60px rgba(0, 242, 255, 0.4);
+            box-shadow: 0 0 30px var(--glow), 0 0 70px rgba(0, 242, 255, 0.35);
             transform: scale(1);
-            opacity: 0.3;
+            opacity: 0.28;
             will-change: transform, opacity;
         }
 
         .actions {
-            margin-top: 80px;
+            margin-top: 78px;
         }
 
         .btn {
             background: none;
             border: 1px solid rgba(255, 255, 255, 0.3);
             color: var(--text);
-            padding: 12px 40px;
-            font-size: 0.9rem;
+            padding: 12px 42px;
+            font-size: 0.85rem;
             border-radius: 30px;
             cursor: pointer;
             transition: all 0.4s;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.12em;
+        }
+
+        body.active .btn {
+            border-color: rgba(255,255,255,0.18);
+            color: rgba(255,255,255,0.42);
         }
 
         .btn:active {
-            transform: scale(0.95);
-            background: rgba(255, 255, 255, 0.1);
+            transform: scale(0.96);
+            background: rgba(255, 255, 255, 0.08);
         }
-
-        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -102,73 +115,164 @@
         const duration = 60;
         let left = duration;
         let active = false;
-        let tInt, bOut;
+        let tInt;
+        let timers = [];
+        let cycleCount = 0;
 
         const elT = document.getElementById('timer');
         const elS = document.getElementById('state');
         const elD = document.getElementById('dot');
         const elB = document.getElementById('main-btn');
 
-        const fmt = (s) => `00:${s.toString().padStart(2, '0')}`;
+        const fmt = (s) => {
+            const m = Math.floor(s / 60).toString().padStart(2, '0');
+            const sec = (s % 60).toString().padStart(2, '0');
+            return `${m}:${sec}`;
+        };
 
-        function breath() {
+        function setLater(fn, ms) {
+            const id = setTimeout(fn, ms);
+            timers.push(id);
+            return id;
+        }
+
+        function clearAllTimers() {
+            timers.forEach(clearTimeout);
+            timers = [];
+        }
+
+        function setMessage(text, opacity = 1) {
+            elS.style.opacity = 0;
+            setLater(() => {
+                if (!active) return;
+                elS.innerText = text;
+                elS.style.opacity = opacity;
+            }, 350);
+        }
+
+        function inhale() {
             if (!active) return;
 
-            // In (4s)
-            elS.innerText = "吸う";
-            elS.style.opacity = "1";
+            cycleCount++;
+
+            if (cycleCount === 4) {
+                setMessage("気づいたら、戻る", 0.9);
+                setLater(() => {
+                    if (active) inhaleMotion();
+                }, 1600);
+            } else {
+                inhaleMotion();
+            }
+        }
+
+        function inhaleMotion() {
+            if (!active) return;
+
+            setMessage("吸う", 1);
             elD.style.transition = "transform 4s cubic-bezier(0.4, 0, 0.2, 1), opacity 4s ease";
             elD.style.transform = "scale(18)";
             elD.style.opacity = "1";
 
-            bOut = setTimeout(() => {
-                if (!active) return;
-                // Out (6s)
-                elS.innerText = "吐く";
-                elS.style.opacity = "0.6";
-                elD.style.transition = "transform 6s cubic-bezier(0.4, 0, 0.2, 1), opacity 6s ease";
-                elD.style.transform = "scale(1)";
-                elD.style.opacity = "0.2";
-
-                bOut = setTimeout(breath, 6000);
-            }, 4000);
+            setLater(exhale, 4000);
         }
 
-        function toggle() {
-            if (!active) {
-                active = true;
-                left = duration;
-                elB.innerText = "STOP";
-                elB.style.borderColor = "rgba(255,255,255,0.1)";
-                elB.style.color = "#555";
-                
-                breath();
-                tInt = setInterval(() => {
-                    left--;
-                    elT.innerText = fmt(left);
-                    if (left <= 0) reset();
-                }, 1000);
-            } else {
-                reset();
+        function exhale() {
+            if (!active) return;
+
+            setMessage("吐く", 0.72);
+            elD.style.transition = "transform 6s cubic-bezier(0.4, 0, 0.2, 1), opacity 6s ease";
+            elD.style.transform = "scale(1)";
+            elD.style.opacity = "0.22";
+
+            setLater(inhale, 6000);
+        }
+
+        function start() {
+            active = true;
+            left = duration;
+            cycleCount = 0;
+
+            document.body.classList.add("active");
+            elB.innerText = "STOP";
+            elT.innerText = fmt(left);
+
+            elD.style.transition = "all 1s ease";
+            elD.style.transform = "scale(1)";
+            elD.style.opacity = "0.32";
+
+            elS.innerText = "姿勢をゆるめる";
+            elS.style.opacity = 1;
+
+            setLater(() => {
+                if (active) inhale();
+            }, 1800);
+
+            tInt = setInterval(() => {
+                left--;
+                elT.innerText = fmt(left);
+
+                if (left <= 0) {
+                    complete();
+                }
+            }, 1000);
+        }
+
+        function complete() {
+            active = false;
+            clearInterval(tInt);
+            clearAllTimers();
+
+            document.body.classList.remove("active");
+            elB.innerText = "START";
+            elT.innerText = fmt(duration);
+
+            elS.innerText = "余韻を感じる";
+            elS.style.opacity = 1;
+
+            elD.style.transition = "transform 1.8s ease, opacity 1.8s ease";
+            elD.style.transform = "scale(2.4)";
+            elD.style.opacity = "0.45";
+
+            if (navigator.vibrate) {
+                navigator.vibrate(80);
             }
+
+            setLater(() => {
+                elD.style.transition = "all 1.2s ease";
+                elD.style.transform = "scale(1)";
+                elD.style.opacity = "0.28";
+            }, 1800);
         }
 
         function reset() {
             active = false;
             clearInterval(tInt);
-            clearTimeout(bOut);
+            clearAllTimers();
+
+            document.body.classList.remove("active");
             elB.innerText = "START";
-            elB.style.borderColor = "rgba(255,255,255,0.3)";
-            elB.style.color = "#fff";
             elT.innerText = fmt(duration);
-            elS.innerText = left <= 0 ? "Done" : "Ready";
-            elD.style.transition = "all 0.5s ease";
+            elS.innerText = "Ready";
+            elS.style.opacity = 1;
+
+            elD.style.transition = "all 0.7s ease";
             elD.style.transform = "scale(1)";
-            elD.style.opacity = "0.3";
+            elD.style.opacity = "0.28";
+        }
+
+        function toggle() {
+            if (!active) {
+                start();
+            } else {
+                reset();
+            }
         }
 
         elB.onclick = toggle;
-        document.addEventListener('touchmove', (e) => { if(active) e.preventDefault(); }, {passive:false});
+
+        document.addEventListener('touchmove', (e) => {
+            if (active) e.preventDefault();
+        }, { passive: false });
     </script>
 </body>
 </html>
