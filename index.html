@@ -3,27 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Zen</title>
+    <title>1分リセット</title>
     <style>
         :root {
             --bg: #000000;
             --glow: #00f2ff;
             --text: #ffffff;
-            --sub: rgba(255,255,255,0.55);
+            --sub: rgba(255, 255, 255, 0.58);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
-            margin: 0;
             background: var(--bg);
             color: var(--text);
-            font-family: -apple-system, system-ui, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
             height: 100vh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             overflow: hidden;
             touch-action: none;
+            user-select: none;
+        }
+
+        .app {
+            width: 100%;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 24px;
         }
 
         #timer {
@@ -42,13 +61,18 @@
 
         #state {
             font-size: 1.05rem;
-            letter-spacing: 0.18em;
-            height: 1.8em;
-            margin-bottom: 56px;
+            letter-spacing: 0.14em;
+            line-height: 1.7;
+            min-height: 3.2em;
+            margin-bottom: 46px;
             font-weight: 300;
-            color: rgba(255,255,255,0.86);
-            transition: opacity 1s ease;
+            color: rgba(255,255,255,0.88);
             text-align: center;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 16px;
         }
 
         .stage {
@@ -60,19 +84,30 @@
             justify-content: center;
         }
 
+        .ring {
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.06);
+            opacity: 0.65;
+        }
+
         #dot {
             width: 12px;
             height: 12px;
             background: var(--glow);
             border-radius: 50%;
-            box-shadow: 0 0 30px var(--glow), 0 0 70px rgba(0, 242, 255, 0.35);
+            box-shadow:
+                0 0 24px var(--glow),
+                0 0 52px rgba(0, 242, 255, 0.28);
             transform: scale(1);
             opacity: 0.28;
             will-change: transform, opacity;
         }
 
         .actions {
-            margin-top: 78px;
+            margin-top: 74px;
         }
 
         .btn {
@@ -83,39 +118,54 @@
             font-size: 0.85rem;
             border-radius: 30px;
             cursor: pointer;
-            transition: all 0.4s;
+            transition: all 0.35s ease;
             letter-spacing: 0.12em;
+            min-width: 136px;
         }
 
         body.active .btn {
             border-color: rgba(255,255,255,0.18);
-            color: rgba(255,255,255,0.42);
+            color: rgba(255,255,255,0.48);
         }
 
         .btn:active {
             transform: scale(0.96);
             background: rgba(255, 255, 255, 0.08);
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            #timer,
+            #state,
+            #dot,
+            .btn {
+                transition: none !important;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <div id="timer">01:00</div>
-    <div id="state">Ready</div>
+    <main class="app">
+        <div id="timer">01:00</div>
+        <div id="state">1分だけ、頭を休ませる</div>
 
-    <div class="stage">
-        <div id="dot"></div>
-    </div>
+        <div class="stage">
+            <div class="ring"></div>
+            <div id="dot"></div>
+        </div>
 
-    <div class="actions">
-        <button id="main-btn" class="btn">START</button>
-    </div>
+        <div class="actions">
+            <button id="main-btn" class="btn">START</button>
+        </div>
+    </main>
 
     <script>
         const duration = 60;
+
         let left = duration;
         let active = false;
-        let tInt;
+        let completed = false;
+        let tInt = null;
         let timers = [];
         let cycleCount = 0;
 
@@ -123,6 +173,8 @@
         const elS = document.getElementById('state');
         const elD = document.getElementById('dot');
         const elB = document.getElementById('main-btn');
+
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         const fmt = (s) => {
             const m = Math.floor(s / 60).toString().padStart(2, '0');
@@ -142,12 +194,18 @@
         }
 
         function setMessage(text, opacity = 1) {
+            if (!active && !completed) return;
+
             elS.style.opacity = 0;
+            elS.style.transform = "translateY(4px)";
+
             setLater(() => {
-                if (!active) return;
+                if (!active && !completed) return;
+
                 elS.innerText = text;
                 elS.style.opacity = opacity;
-            }, 350);
+                elS.style.transform = "translateY(0)";
+            }, prefersReducedMotion ? 0 : 300);
         }
 
         function inhale() {
@@ -155,11 +213,16 @@
 
             cycleCount++;
 
+            /*
+              1分の中盤で一度だけ、
+              「集中できなくても失敗ではない」ことを伝える。
+            */
             if (cycleCount === 4) {
-                setMessage("気づいたら、戻る", 0.9);
+                setMessage("考えごとに気づいたら、\n呼吸へ戻る", 0.92);
+
                 setLater(() => {
                     if (active) inhaleMotion();
-                }, 1600);
+                }, 1800);
             } else {
                 inhaleMotion();
             }
@@ -169,9 +232,14 @@
             if (!active) return;
 
             setMessage("吸う", 1);
-            elD.style.transition = "transform 4s cubic-bezier(0.4, 0, 0.2, 1), opacity 4s ease";
-            elD.style.transform = "scale(18)";
-            elD.style.opacity = "1";
+
+            if (!prefersReducedMotion) {
+                elD.style.transition =
+                    "transform 4s cubic-bezier(0.4, 0, 0.2, 1), opacity 4s ease";
+            }
+
+            elD.style.transform = "scale(15)";
+            elD.style.opacity = "0.92";
 
             setLater(exhale, 4000);
         }
@@ -179,29 +247,40 @@
         function exhale() {
             if (!active) return;
 
-            setMessage("吐く", 0.72);
-            elD.style.transition = "transform 6s cubic-bezier(0.4, 0, 0.2, 1), opacity 6s ease";
+            setMessage("ゆっくり吐く", 0.76);
+
+            if (!prefersReducedMotion) {
+                elD.style.transition =
+                    "transform 6s cubic-bezier(0.4, 0, 0.2, 1), opacity 6s ease";
+            }
+
             elD.style.transform = "scale(1)";
-            elD.style.opacity = "0.22";
+            elD.style.opacity = "0.24";
 
             setLater(inhale, 6000);
         }
 
         function start() {
             active = true;
+            completed = false;
             left = duration;
             cycleCount = 0;
 
+            clearInterval(tInt);
+            clearAllTimers();
+
             document.body.classList.add("active");
+
             elB.innerText = "STOP";
             elT.innerText = fmt(left);
 
-            elD.style.transition = "all 1s ease";
+            elD.style.transition = prefersReducedMotion ? "none" : "all 1s ease";
             elD.style.transform = "scale(1)";
-            elD.style.opacity = "0.32";
+            elD.style.opacity = "0.28";
 
-            elS.innerText = "姿勢をゆるめる";
+            elS.innerText = "肩の力を抜く";
             elS.style.opacity = 1;
+            elS.style.transform = "translateY(0)";
 
             setLater(() => {
                 if (active) inhale();
@@ -209,7 +288,7 @@
 
             tInt = setInterval(() => {
                 left--;
-                elT.innerText = fmt(left);
+                elT.innerText = fmt(Math.max(left, 0));
 
                 if (left <= 0) {
                     complete();
@@ -219,6 +298,8 @@
 
         function complete() {
             active = false;
+            completed = true;
+
             clearInterval(tInt);
             clearAllTimers();
 
@@ -226,36 +307,48 @@
             elB.innerText = "START";
             elT.innerText = fmt(duration);
 
-            elS.innerText = "余韻を感じる";
+            elS.innerText = "今の肩の力に気づく";
             elS.style.opacity = 1;
+            elS.style.transform = "translateY(0)";
 
-            elD.style.transition = "transform 1.8s ease, opacity 1.8s ease";
+            elD.style.transition = prefersReducedMotion
+                ? "none"
+                : "transform 1.8s ease, opacity 1.8s ease";
             elD.style.transform = "scale(2.4)";
-            elD.style.opacity = "0.45";
+            elD.style.opacity = "0.42";
 
             if (navigator.vibrate) {
-                navigator.vibrate(80);
+                navigator.vibrate(70);
             }
 
             setLater(() => {
-                elD.style.transition = "all 1.2s ease";
+                completed = true;
+                elS.innerText = "また必要なときに";
+                elS.style.opacity = 0.82;
+
+                elD.style.transition = prefersReducedMotion ? "none" : "all 1.2s ease";
                 elD.style.transform = "scale(1)";
                 elD.style.opacity = "0.28";
-            }, 1800);
+            }, 2600);
         }
 
         function reset() {
             active = false;
+            completed = false;
+
             clearInterval(tInt);
             clearAllTimers();
 
             document.body.classList.remove("active");
+
             elB.innerText = "START";
             elT.innerText = fmt(duration);
-            elS.innerText = "Ready";
-            elS.style.opacity = 1;
 
-            elD.style.transition = "all 0.7s ease";
+            elS.innerText = "1分だけ、頭を休ませる";
+            elS.style.opacity = 1;
+            elS.style.transform = "translateY(0)";
+
+            elD.style.transition = prefersReducedMotion ? "none" : "all 0.7s ease";
             elD.style.transform = "scale(1)";
             elD.style.opacity = "0.28";
         }
@@ -268,7 +361,7 @@
             }
         }
 
-        elB.onclick = toggle;
+        elB.addEventListener('click', toggle);
 
         document.addEventListener('touchmove', (e) => {
             if (active) e.preventDefault();
