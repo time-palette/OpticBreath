@@ -3,26 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Digital Zen | 1分間のリセット</title>
+    <title>Zen</title>
     <style>
         :root {
-            --bg-color: #010409;
-            --accent-color: #00f2ff;
-            --text-main: #f0f6fc;
-            --text-sub: #8b949e;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
+            --bg: #000000;
+            --glow: #00f2ff;
+            --text: #ffffff;
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, system-ui, sans-serif;
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -32,45 +25,23 @@
             touch-action: none;
         }
 
-        /* 背景のオーラ演出 */
-        .ambient-glow {
-            position: absolute;
-            width: 100vw;
-            height: 100vh;
-            background: radial-gradient(circle at center, rgba(0, 242, 255, 0.04) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        .container {
-            position: relative;
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-            max-width: 400px;
-            padding: 20px;
-        }
-
         #timer {
-            font-size: 3.5rem;
+            font-size: 3rem;
             font-weight: 200;
-            letter-spacing: -0.05em;
-            margin-bottom: 5px;
+            margin-bottom: 20px;
             font-variant-numeric: tabular-nums;
+            opacity: 0.8;
         }
 
-        #instruction {
+        #state {
             font-size: 1.2rem;
-            font-weight: 300;
+            letter-spacing: 0.2em;
             height: 1.5em;
-            margin-bottom: 50px;
-            transition: all 0.6s ease;
-            letter-spacing: 0.05em;
+            margin-bottom: 60px;
+            font-weight: 300;
         }
 
-        /* 呼吸ビジュアライザー */
-        .visualizer {
+        .stage {
             position: relative;
             width: 250px;
             height: 250px;
@@ -79,192 +50,125 @@
             justify-content: center;
         }
 
-        #circle {
-            width: 16px;
-            height: 16px;
-            background-color: var(--accent-color);
+        #dot {
+            width: 12px;
+            height: 12px;
+            background: var(--glow);
             border-radius: 50%;
-            box-shadow: 
-                0 0 30px var(--accent-color),
-                0 0 60px rgba(0, 242, 255, 0.3);
+            box-shadow: 0 0 30px var(--glow), 0 0 60px rgba(0, 242, 255, 0.4);
             transform: scale(1);
             opacity: 0.3;
             will-change: transform, opacity;
         }
 
-        /* 操作ボタン */
-        .controls {
-            margin-top: 60px;
-            width: 100%;
-            display: flex;
-            justify-content: center;
+        .actions {
+            margin-top: 80px;
         }
 
         .btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(0, 242, 255, 0.4);
-            color: var(--accent-color);
-            padding: 14px 45px;
-            font-size: 1rem;
-            border-radius: 50px;
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: var(--text);
+            padding: 12px 40px;
+            font-size: 0.9rem;
+            border-radius: 30px;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(8px);
-            letter-spacing: 0.05em;
+            transition: all 0.4s;
+            letter-spacing: 0.1em;
         }
 
         .btn:active {
-            transform: scale(0.96);
-            background: rgba(0, 242, 255, 0.1);
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        .btn.secondary {
-            border-color: #30363d;
-            color: #8b949e;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .helper-text {
-            position: absolute;
-            bottom: 40px;
-            font-size: 0.8rem;
-            color: #484f58;
-            text-align: center;
-            max-width: 80%;
-            line-height: 1.6;
-            transition: opacity 0.5s;
-        }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <div class="ambient-glow"></div>
+    <div id="timer">01:00</div>
+    <div id="state">Ready</div>
 
-    <div class="container">
-        <div id="timer">01:00</div>
-        <div id="instruction">1分間で、自分を取り戻す</div>
-        
-        <div class="visualizer">
-            <div id="circle"></div>
-        </div>
+    <div class="stage">
+        <div id="dot"></div>
+    </div>
 
-        <div class="controls">
-            <button id="start-btn" class="btn">今すぐ始める</button>
-            <button id="stop-btn" class="btn secondary hidden">中断</button>
-        </div>
-   
-
+    <div class="actions">
+        <button id="main-btn" class="btn">START</button>
+    </div>
 
     <script>
-        const SESSION_SECONDS = 60; // 1 minute
-        const INHALE_MS = 4000;
-        const EXHALE_MS = 6000; // 10s per breath cycle = 6 breaths/min
+        const duration = 60;
+        let left = duration;
+        let active = false;
+        let tInt, bOut;
 
-        let timeLeft = SESSION_SECONDS;
-        let isRunning = false;
-        let timerInterval = null;
-        let breathTimeout = null;
+        const elT = document.getElementById('timer');
+        const elS = document.getElementById('state');
+        const elD = document.getElementById('dot');
+        const elB = document.getElementById('main-btn');
 
-        const timerEl = document.getElementById('timer');
-        const instructionEl = document.getElementById('instruction');
-        const circleEl = document.getElementById('circle');
-        const startBtn = document.getElementById('start-btn');
-        const stopBtn = document.getElementById('stop-btn');
-        const helperEl = document.getElementById('helper');
+        const fmt = (s) => `00:${s.toString().padStart(2, '0')}`;
 
-        function formatTime(s) {
-            const min = Math.floor(s / 60);
-            const sec = s % 60;
-            return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+        function breath() {
+            if (!active) return;
+
+            // In (4s)
+            elS.innerText = "吸う";
+            elS.style.opacity = "1";
+            elD.style.transition = "transform 4s cubic-bezier(0.4, 0, 0.2, 1), opacity 4s ease";
+            elD.style.transform = "scale(18)";
+            elD.style.opacity = "1";
+
+            bOut = setTimeout(() => {
+                if (!active) return;
+                // Out (6s)
+                elS.innerText = "吐く";
+                elS.style.opacity = "0.6";
+                elD.style.transition = "transform 6s cubic-bezier(0.4, 0, 0.2, 1), opacity 6s ease";
+                elD.style.transform = "scale(1)";
+                elD.style.opacity = "0.2";
+
+                bOut = setTimeout(breath, 6000);
+            }, 4000);
         }
 
-        function updateBreathing() {
-            if (!isRunning) return;
-
-            // 吸気 (4s)
-            instructionEl.innerText = "鼻からゆっくり吸って";
-            instructionEl.style.color = "var(--accent-color)";
-            circleEl.style.transition = `transform ${INHALE_MS}ms cubic-bezier(0.4, 0, 0.2, 1), opacity ${INHALE_MS}ms ease`;
-            circleEl.style.transform = "scale(15)";
-            circleEl.style.opacity = "1";
-
-            breathTimeout = setTimeout(() => {
-                if (!isRunning) return;
-
-                // 呼気 (6s)
-                instructionEl.innerText = "口から細く長く吐いて";
-                instructionEl.style.color = "var(--text-main)";
-                circleEl.style.transition = `transform ${EXHALE_MS}ms cubic-bezier(0.4, 0, 0.2, 1), opacity ${EXHALE_MS}ms ease`;
-                circleEl.style.transform = "scale(1)";
-                circleEl.style.opacity = "0.2";
-
-                breathTimeout = setTimeout(updateBreathing, EXHALE_MS);
-            }, INHALE_MS);
+        function toggle() {
+            if (!active) {
+                active = true;
+                left = duration;
+                elB.innerText = "STOP";
+                elB.style.borderColor = "rgba(255,255,255,0.1)";
+                elB.style.color = "#555";
+                
+                breath();
+                tInt = setInterval(() => {
+                    left--;
+                    elT.innerText = fmt(left);
+                    if (left <= 0) reset();
+                }, 1000);
+            } else {
+                reset();
+            }
         }
 
-        function startSession() {
-            isRunning = true;
-            timeLeft = SESSION_SECONDS;
-            timerEl.innerText = formatTime(timeLeft);
-            
-            startBtn.classList.add('hidden');
-            stopBtn.classList.remove('hidden');
-            helperEl.style.opacity = "0.1";
-
-            updateBreathing();
-
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                timerEl.innerText = formatTime(timeLeft);
-
-                if (timeLeft <= 0) {
-                    endSession();
-                }
-            }, 1000);
+        function reset() {
+            active = false;
+            clearInterval(tInt);
+            clearTimeout(bOut);
+            elB.innerText = "START";
+            elB.style.borderColor = "rgba(255,255,255,0.3)";
+            elB.style.color = "#fff";
+            elT.innerText = fmt(duration);
+            elS.innerText = left <= 0 ? "Done" : "Ready";
+            elD.style.transition = "all 0.5s ease";
+            elD.style.transform = "scale(1)";
+            elD.style.opacity = "0.3";
         }
 
-        function stopSession() {
-            isRunning = false;
-            clearInterval(timerInterval);
-            clearTimeout(breathTimeout);
-            
-            startBtn.classList.remove('hidden');
-            stopBtn.classList.add('hidden');
-            helperEl.style.opacity = "1";
-
-            instructionEl.innerText = "1分間で、自分を取り戻す";
-            timerEl.innerText = formatTime(SESSION_SECONDS);
-            circleEl.style.transition = "all 0.5s ease";
-            circleEl.style.transform = "scale(1)";
-            circleEl.style.opacity = "0.3";
-        }
-
-        function endSession() {
-            isRunning = false;
-            clearInterval(timerInterval);
-            clearTimeout(breathTimeout);
-
-            startBtn.classList.remove('hidden');
-            stopBtn.classList.add('hidden');
-            startBtn.innerText = "もう1回行う";
-            
-            instructionEl.innerText = "整いました";
-            circleEl.style.transform = "scale(1)";
-            circleEl.style.opacity = "0.3";
-            helperEl.style.opacity = "1";
-        }
-
-        startBtn.addEventListener('click', startSession);
-        stopBtn.addEventListener('click', stopSession);
-
-        // iPhone Safari スクロール防止
-        document.addEventListener('touchmove', (e) => {
-            if (isRunning) e.preventDefault();
-        }, { passive: false });
+        elB.onclick = toggle;
+        document.addEventListener('touchmove', (e) => { if(active) e.preventDefault(); }, {passive:false});
     </script>
 </body>
 </html>
-
